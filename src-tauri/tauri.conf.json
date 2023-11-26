@@ -28,8 +28,8 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.leastrio",
-      "longDescription": "",
+      "identifier": "com.dolos.meow",
+      "longDescription": "A desktop application to control offline status for games made by Riot Games.",
       "macOS": {
         "entitlements": null,
         "exceptionDomain": "",
