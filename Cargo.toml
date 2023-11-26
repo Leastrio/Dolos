@@ -1,0 +1,7 @@
+[workspace]
+members = ["src-tauri"]
+
+[profile.release]
+strip = true
+lto = true
+opt-level = 1
