@@ -3,7 +3,8 @@
     "beforeBuildCommand": "",
     "beforeDevCommand": "",
     "devPath": "../ui",
-    "distDir": "../ui"
+    "distDir": "../ui",
+    "withGlobalTauri": true
   },
   "package": {
     "productName": "Dolos",
@@ -55,8 +56,8 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
-        "resizable": true,
+        "height": 675,
+        "resizable": false,
         "title": "Dolos",
         "width": 800
       }
