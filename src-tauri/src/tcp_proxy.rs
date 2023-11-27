@@ -73,8 +73,8 @@ pub async fn proxy_tcp_chat() -> DolosResult<()> {
     CHAT_PORT.set(listener.local_addr()?.port().into())?;
     println!("Listening TCP on {}", listener.local_addr()?);
 
-    let cert = include_bytes!("../cert/server.cert");
-    let key = include_bytes!("../cert/server.key");
+    let cert = include_bytes!("../../certs/server.cert");
+    let key = include_bytes!("../../certs/server.key");
     let cert = Identity::from_pkcs8(cert, key)?;
 
     let acceptor = Arc::new(tokio_native_tls::TlsAcceptor::from(native_tls::TlsAcceptor::new(cert)?));
@@ -160,7 +160,5 @@ async fn rewrite_presence(data: &str) -> Vec<u8> {
             }
         }
     }
-    let res = writer.into_inner().into_inner();
-    println!("{}", String::from_utf8_lossy(&res));
-    res
+    writer.into_inner().into_inner()
 }

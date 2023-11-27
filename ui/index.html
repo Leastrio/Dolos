@@ -82,11 +82,13 @@
   </div>
   <script>
     document.getElementById('league-of-legends').addEventListener('click', function() {
-        console.log("meow");
+      const { invoke } = window.__TAURI__.tauri
+      invoke('launch_game', { game: "league_of_legends" })
     });
 
     document.getElementById('valorant').addEventListener('click', function() {
-        // Code to launch Valorant
+      const { invoke } = window.__TAURI__.tauri
+      invoke('launch_game', { game: "valorant" })
     });
 
     addEventListener("contextmenu", (e) => {

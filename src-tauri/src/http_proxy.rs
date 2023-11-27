@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, convert::Infallible};
+use std::convert::Infallible;
 
 use http_body_util::Full;
 use hyper::{server::conn::http1, service::service_fn, Request, body::{Incoming, Bytes}, Response};
@@ -14,6 +14,7 @@ const CONFIG_URL: &str = "https://clientconfig.rpg.riotgames.com";
 const GEO_PAS_URL: &str = "https://riot-geo.pas.si.riotgames.com/pas/v1/service/chat";
 
 pub static RIOT_CHAT: OnceCell<RiotChat> = OnceCell::const_new();
+pub static HTTP_PORT: OnceCell<u64> = OnceCell::const_new();
 
 #[derive(Debug)]
 pub struct RiotChat {
@@ -22,10 +23,10 @@ pub struct RiotChat {
 }
 
 
-pub async fn listen_http() -> DolosResult<SocketAddr> {
+pub async fn listen_http() -> DolosResult<()> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
-    let addy = listener.local_addr()?;
-    println!("Listening HTTP on {}", addy);
+    HTTP_PORT.set(listener.local_addr()?.port().into())?;
+    println!("Listening HTTP on {}", listener.local_addr()?);
     
     tokio::spawn(async move {
         loop {
@@ -42,7 +43,7 @@ pub async fn listen_http() -> DolosResult<SocketAddr> {
             });
         }
     });
-    Ok(addy)
+    Ok(())
 }
 
 async fn process(req: Request<Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
