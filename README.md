@@ -24,7 +24,8 @@ Dolos is designed to act as a proxy between Riot Games' chat servers and a user'
 
 ### Manual Building
 
-Install Rust: https://www.rust-lang.org/tools/install\
+Install Rust: https://www.rust-lang.org/tools/install
+
 Install Tauri Prerequisites: https://tauri.app/v1/guides/getting-started/prerequisites#setting-up-windows
 
 1. Clone the repository:
