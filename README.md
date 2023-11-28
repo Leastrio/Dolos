@@ -1,4 +1,4 @@
-# <img src="ui/assets/logo.png" width="75px" height="75px"/> Dolos - Offline Mode for League of Legends and Valorant
+# <img src="ui/assets/logo.png" width="75px" height="75px"/> Dolos
 
 Dolos is designed to act as a proxy between Riot Games' chat servers and a user's game client. Its primary feature is to enable users to appear offline in their games, preventing their friends from seeing their online status while still allowing the user to play in parties and to enjoy the gaming experience.
 
