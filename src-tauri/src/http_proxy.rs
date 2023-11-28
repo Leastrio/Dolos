@@ -26,11 +26,11 @@ pub struct RiotChat {
 pub async fn listen_http() -> DolosResult<()> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     HTTP_PORT.set(listener.local_addr()?.port().into())?;
-    println!("Listening HTTP on {}", listener.local_addr()?);
+    println!("[Dolos] [HTTP] Listening on {}", listener.local_addr()?);
     
     tokio::spawn(async move {
         loop {
-            let (stream, _) = listener.accept().await.expect("Could not accept connection");
+            let (stream, _) = listener.accept().await.expect("[Dolos] [HTTP] Could not accept connection");
             let io = TokioIo::new(stream);
             
             tokio::spawn(async move {
@@ -38,7 +38,7 @@ pub async fn listen_http() -> DolosResult<()> {
                     .serve_connection(io, service_fn(process))
                     .await
                 {
-                    println!("Error serving connection: {:?}", err);
+                    println!("[Dolos] [HTTP] Error serving connection: {:?}", err);
                 }
             });
         }
@@ -49,29 +49,30 @@ pub async fn listen_http() -> DolosResult<()> {
 async fn process(req: Request<Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
     let client = reqwest::Client::new();
     let url = CONFIG_URL.to_owned() + &req.uri().to_string();
+    println!("[Dolos] [HTTP] Sending Request to {}", url);
     let mut headers = HeaderMap::new();
 
     if let Some(user_agent) = req.headers().get("user-agent") {
-        headers.append("user-agent", user_agent.to_str().expect("Header value is not a valid string").to_string().parse().expect("Could not parse header value"));
+        headers.append("user-agent", user_agent.to_str().expect("[Dolos] [HTTP] Header value is not a valid string").to_string().parse().expect("[Dolos] [HTTP] Could not parse header value"));
     }
     if let Some(jwt) = req.headers().get("x-riot-entitlements-jwt") {
-        headers.append("x-riot-entitlements-jwt", jwt.to_str().expect("Header value is not a valid string").to_string().parse().expect("Could not parse header value"));
+        headers.append("x-riot-entitlements-jwt", jwt.to_str().expect("[Dolos] [HTTP] Header value is not a valid string").to_string().parse().expect("[Dolos] [HTTP] Could not parse header value"));
     }
     if let Some(auth) = req.headers().get("authorization") {
-        headers.append("authorization", auth.to_str().expect("Header value is not a valid string").to_string().parse().expect("Could not parse header value"));
+        headers.append("authorization", auth.to_str().expect("[Dolos] [HTTP] Header value is not a valid string").to_string().parse().expect("[Dolos] [HTTP] Could not parse header value"));
     }
 
     let resp = client.get(url)
         .headers(headers.clone())
         .send()
         .await
-        .expect("Could not make request");
+        .expect("[Dolos] [HTTP] Could not make request");
 
     let reply = if resp.status() == 200 {
-        let data: Value = serde_json::from_slice(&resp.bytes().await.expect("Could not get bytes")).expect("Invalid JSON");
+        let data: Value = serde_json::from_slice(&resp.bytes().await.expect("[Dolos] [HTTP] Could not get bytes")).expect("[Dolos] [HTTP] Invalid JSON");
         rewrite_resp(data, headers).await
     } else {
-        resp.bytes().await.expect("Could not get bytes")
+        resp.bytes().await.expect("[Dolos] [HTTP] Could not get bytes")
     };
     
     Ok(Response::new(Full::new(reply)))
@@ -99,15 +100,15 @@ async fn rewrite_resp(mut resp: Value, headers: HeaderMap) -> Bytes {
                     .headers(headers)
                     .send()
                     .await
-                    .expect("Could not fetch pas token")
+                    .expect("[Dolos] [HTTP] Could not fetch pas token")
                     .text()
                     .await
-                    .expect("could not fetch body from pas req");
+                    .expect("[Dolos] [HTTP] could not fetch body from pas req");
 
                 let mut validation = Validation::new(Algorithm::HS256);
                 validation.insecure_disable_signature_validation();
 
-                let jwt = decode::<Value>(&pas, &DecodingKey::from_secret(&[]), &validation).expect("Could not decode jwt");
+                let jwt = decode::<Value>(&pas, &DecodingKey::from_secret(&[]), &validation).expect("[Dolos] [HTTP] Could not decode jwt");
                 riot_chat_host = resp["chat.affinities"][jwt.claims["affinity"].as_str().unwrap()].to_string();
             }
         }
@@ -121,8 +122,8 @@ async fn rewrite_resp(mut resp: Value, headers: HeaderMap) -> Bytes {
     }
 
     if riot_chat_port != 0 && !riot_chat_host.is_empty() && !RIOT_CHAT.initialized() {
-        RIOT_CHAT.set(RiotChat { host: riot_chat_host.trim_start_matches("\"").trim_end_matches("\"").to_string(), port: riot_chat_port }).expect("RIOT_CHAT OnceCell written to twice");
+        RIOT_CHAT.set(RiotChat { host: riot_chat_host.trim_start_matches("\"").trim_end_matches("\"").to_string(), port: riot_chat_port }).expect("[Dolos] [HTTP] RIOT_CHAT OnceCell written to twice");
         INIT_NOTIFY.notify_one();
     }
-    Bytes::from(serde_json::to_vec(&resp).expect("Could not serialize to vec"))
+    Bytes::from(serde_json::to_vec(&resp).expect("[Dolos] [HTTP] Could not serialize to vec"))
 }

@@ -13,13 +13,15 @@ pub static RIOT_CLIENT_PATH: OnceCell<String> = OnceCell::const_new();
 type DolosResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
 fn main() {
-  utils::is_running();
+  // TODO: Check if riot client is running at boot, close if so
+  // TODO: Close riot client if dolos closes
+  // utils::is_running();
   let file_path = format!(
     "{}\\Riot Games\\RiotClientInstalls.json",
-    env::var("ProgramData").expect("Could not find program data folder")
+    env::var("ProgramData").expect("[Dolos] [Main] Could not find program data folder")
   );
-  let data = serde_json::from_str(&String::from_utf8_lossy(&fs::read(file_path).expect("Could not read riot installs config"))).expect("Could not parse riot installs config");
-  RIOT_CLIENT_PATH.set(utils::choose_channel(data).unwrap()).expect("Could not set RIOT_CLIENT_PATH");
+  let data = serde_json::from_str(&String::from_utf8_lossy(&fs::read(file_path).expect("[Dolos] [Main] Could not read riot installs config"))).expect("[Dolos] [Main] Could not parse riot installs config");
+  RIOT_CLIENT_PATH.set(utils::choose_channel(data).unwrap()).expect("[Dolos] [Main] Could not set RIOT_CLIENT_PATH");
 
   tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![launch_game])
@@ -31,7 +33,7 @@ fn main() {
       Ok(())
     })
     .run(tauri::generate_context!())
-    .expect("error while running tauri application");
+    .expect("[Dolos] [Main] error while running tauri application");
 }
 
 #[tauri::command]
@@ -41,5 +43,5 @@ fn launch_game(game: &str) -> () {
         .arg(format!("--launch-product={}", game))
         .arg("--launch-patchline=live")
         .spawn()
-        .expect("Could not launch riot client!");
+        .expect("[Dolos] [Main] Could not launch riot client!");
 }

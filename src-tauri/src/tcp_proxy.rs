@@ -50,7 +50,7 @@ impl OutputActor {
                 // Receiving from Client + sending to Riot Games
                 Some(data) = self.output_reciever.recv() => {
                     let data_str = String::from_utf8_lossy(&data);
-                    let msg = if data_str.starts_with("<presence") {
+                    let msg = if data_str.contains("<presence") {
                         rewrite_presence(&data_str).await
                     } else {
                         data
@@ -71,7 +71,7 @@ impl OutputActor {
 pub async fn proxy_tcp_chat() -> DolosResult<()> {
     let listener = TcpListener::bind("127.0.0.1:0").await?;
     CHAT_PORT.set(listener.local_addr()?.port().into())?;
-    println!("Listening TCP on {}", listener.local_addr()?);
+    println!("[Dolos] [TCP] Listening on {}", listener.local_addr()?);
 
     let cert = include_bytes!("../../certs/server.cert");
     let key = include_bytes!("../../certs/server.key");
@@ -81,16 +81,16 @@ pub async fn proxy_tcp_chat() -> DolosResult<()> {
 
 
     INIT_NOTIFY.notified().await;
-    println!("Continuing...");
+    println!("[Dolos] [TCP] Continuing...");
 
     loop {
-        let (stream, _) = listener.accept().await.expect("Could not accept connection");
-        let input_stream = (acceptor.clone()).accept(stream).await.expect("Could not accept connection via tls");
+        let (stream, _) = listener.accept().await.expect("[Dolos] [TCP] Could not accept connection");
+        let input_stream = (acceptor.clone()).accept(stream).await.expect("[Dolos] [TCP] Could not accept connection via tls");
 
         let riot_chat = RIOT_CHAT.get().unwrap();
-        let output_stream = TcpStream::connect(format!("{}:{}", riot_chat.host, riot_chat.port)).await.expect("Could not connect to riot chat server");
-        let connector = tokio_native_tls::TlsConnector::from(native_tls::TlsConnector::new().expect("Could not create tls connector"));
-        let output_stream = connector.connect(&riot_chat.host, output_stream).await.expect("Could not connect tls to riot chat server");
+        let output_stream = TcpStream::connect(format!("{}:{}", riot_chat.host, riot_chat.port)).await.expect("[Dolos] [TCP] Could not connect to riot chat server");
+        let connector = tokio_native_tls::TlsConnector::from(native_tls::TlsConnector::new().expect("[Dolos] [TCP] Could not create tls connector"));
+        let output_stream = connector.connect(&riot_chat.host, output_stream).await.expect("[Dolos] [TCP] Could not connect tls to riot chat server");
 
         let (input_sender, input_reciever) = mpsc::channel::<Vec<u8>>(100);
         let (output_sender, output_reciever) = mpsc::channel::<Vec<u8>>(100);
@@ -112,51 +112,59 @@ pub async fn proxy_tcp_chat() -> DolosResult<()> {
 }
 
 async fn rewrite_presence(data: &str) -> Vec<u8> {
+    println!("[Dolos] [TCP] Rewriting Presence Update");
     let mut reader = Reader::from_str(data);
     let mut writer = Writer::new(Cursor::new(Vec::new()));
 
     let mut inside_show = false;
-    let mut inside_league = false;
-    let mut inside_league_st = false;
+    let mut inside_game = false;
+    let mut inside_game_st = false;
 
     loop {
         match reader.read_event() {
+            // Tag Starts
             Ok(Event::Start(e)) if e.name().as_ref() == b"show" => {
                 inside_show = true;
                 writer.write_event_async(Event::Start(e.clone())).await.unwrap();
             },
-            Ok(Event::Start(e)) if e.name().as_ref() == b"league_of_legends" => {
-                inside_league = true;
+            Ok(Event::Start(e)) if e.name().as_ref() == b"league_of_legends" || e.name().as_ref() == b"valorant" => {
+                inside_game = true;
                 writer.write_event_async(Event::Start(e.clone())).await.unwrap();
             },
-            Ok(Event::Start(e)) if inside_league && e.name().as_ref() == b"st" => {
-                inside_league_st = true;
+            Ok(Event::Start(e)) if inside_game && e.name().as_ref() == b"st" => {
+                inside_game_st = true;
                 writer.write_event_async(Event::Start(e.clone())).await.unwrap();
             },
             Ok(Event::Start(e)) if e.name().as_ref() == b"status" => {},
+
+            // Tag insides
             Ok(Event::Text(_)) if inside_show => {
                 writer.write_event_async(Event::Text(BytesText::new("offline"))).await.unwrap();
             },
-            Ok(Event::Text(_)) if inside_league && inside_league_st => {
+            Ok(Event::Text(_)) if inside_game && inside_game_st => {
                 writer.write_event_async(Event::Text(BytesText::new("offline"))).await.unwrap();
             },
+
+            // Tag ends
             Ok(Event::End(e)) if inside_show => {
                 inside_show = false;
                 writer.write_event_async(Event::End(e)).await.unwrap();
             },
-            Ok(Event::End(e)) if e.name().as_ref() == b"league_of_legends" => {
-                inside_league = false;
+            Ok(Event::End(e)) if e.name().as_ref() == b"league_of_legends" || e.name().as_ref() == b"valorant" => {
+                inside_game = false;
                 writer.write_event_async(Event::End(e)).await.unwrap();
             },
-            Ok(Event::End(e)) if inside_league && e.name().as_ref() == b"st" => {
-                inside_league_st = false;
+            Ok(Event::End(e)) if inside_game_st && e.name().as_ref() == b"st" => {
+                inside_game_st = false;
                 writer.write_event_async(Event::End(e)).await.unwrap();
             },
             Ok(Event::End(e)) if e.name().as_ref() == b"status" => {},
+
+            // Other
             Ok(Event::Eof) => break,
             Ok(e) => writer.write_event_async(e).await.unwrap(),
             Err(e) => {
-                eprintln!("Error while parsing xml: {}", e)
+                eprintln!("[Dolos] [TCP] Error while parsing xml: {}", e)
             }
         }
     }
