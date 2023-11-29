@@ -22,16 +22,17 @@ struct OutputActor {
     output_reciever: mpsc::Receiver<Vec<u8>>
 }
 
+// Server for Riot Client
 impl InputActor {
     async fn run(mut self) {
         loop {
             let mut curr_buf = [0; 1024 * 64];
             tokio::select! {
-                // Receiving from Riot Games + sending to Client
+                // Receiving from Output Actor
                 Some(data) = self.input_reciever.recv() => {
                     let _ = self.input_stream.write_all(&data).await;
                 }
-                // Receiving from Client + sending to Riot Games
+                // Receiving from Riot Client
                 Ok(n) = self.input_stream.read(&mut curr_buf) => {
                     if n > 0 {
                         let _ = self.output_sender.send(curr_buf[0..n].to_vec()).await;
@@ -42,12 +43,13 @@ impl InputActor {
     }
 }
 
+// Connection to Riot Servers
 impl OutputActor {
     async fn run(mut self) {
         loop {
             let mut curr_buf = [0; 1024 * 64]; 
             tokio::select! {
-                // Receiving from Client + sending to Riot Games
+                // Receiving from Input Actor
                 Some(data) = self.output_reciever.recv() => {
                     let data_str = String::from_utf8_lossy(&data);
                     let msg = if data_str.contains("<presence") {
@@ -57,7 +59,7 @@ impl OutputActor {
                     };
                     let _ = self.output_stream.write_all(&msg).await;
                 }
-                // Receiving from Riot Games + sending to Client
+                // Receiving from Riot Servers
                 Ok(n) = self.output_stream.read(&mut curr_buf) => {
                     if n > 0 {
                         let _ = self.input_sender.send(curr_buf[0..n].to_vec()).await;
