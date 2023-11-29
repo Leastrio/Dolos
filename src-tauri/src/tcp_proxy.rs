@@ -120,7 +120,6 @@ async fn rewrite_presence(data: &str) -> Vec<u8> {
 
     let mut inside_show = false;
     let mut inside_game = false;
-    let mut inside_game_st = false;
 
     loop {
         match reader.read_event() {
@@ -131,21 +130,15 @@ async fn rewrite_presence(data: &str) -> Vec<u8> {
             },
             Ok(Event::Start(e)) if e.name().as_ref() == b"league_of_legends" || e.name().as_ref() == b"valorant" => {
                 inside_game = true;
-                writer.write_event_async(Event::Start(e.clone())).await.unwrap();
             },
-            Ok(Event::Start(e)) if inside_game && e.name().as_ref() == b"st" => {
-                inside_game_st = true;
-                writer.write_event_async(Event::Start(e.clone())).await.unwrap();
-            },
+            Ok(Event::Start(_)) if inside_game => {}
             Ok(Event::Start(e)) if e.name().as_ref() == b"status" => {},
 
             // Tag insides
             Ok(Event::Text(_)) if inside_show => {
                 writer.write_event_async(Event::Text(BytesText::new("offline"))).await.unwrap();
             },
-            Ok(Event::Text(_)) if inside_game && inside_game_st => {
-                writer.write_event_async(Event::Text(BytesText::new("offline"))).await.unwrap();
-            },
+            Ok(Event::Text(_)) if inside_game => {},
 
             // Tag ends
             Ok(Event::End(e)) if inside_show => {
@@ -154,13 +147,9 @@ async fn rewrite_presence(data: &str) -> Vec<u8> {
             },
             Ok(Event::End(e)) if e.name().as_ref() == b"league_of_legends" || e.name().as_ref() == b"valorant" => {
                 inside_game = false;
-                writer.write_event_async(Event::End(e)).await.unwrap();
-            },
-            Ok(Event::End(e)) if inside_game_st && e.name().as_ref() == b"st" => {
-                inside_game_st = false;
-                writer.write_event_async(Event::End(e)).await.unwrap();
             },
             Ok(Event::End(e)) if e.name().as_ref() == b"status" => {},
+            Ok(Event::End(_)) if inside_game => {},
 
             // Other
             Ok(Event::Eof) => break,
