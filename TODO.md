@@ -1,2 +1,4 @@
 - Close riot client if dolos closes
 - Read which games are installed and only show the ones installed
+- Toggleable statuses
+- Fake user

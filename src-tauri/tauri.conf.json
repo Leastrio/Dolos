@@ -8,13 +8,11 @@
   },
   "package": {
     "productName": "Dolos",
-    "version": "0.1.2"
+    "version": "0.1.3"
   },
   "tauri": {
     "allowlist": {
-      "window": {
-        "close": true
-      }
+      "all": false
     },
     "systemTray": {
       "iconPath": "icons/icon.png",

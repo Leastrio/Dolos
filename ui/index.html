@@ -79,7 +79,14 @@
     }
 
     document.getElementById('btnNo').addEventListener('click', function() {
-      hideRiotClientPopup();
+      const { invoke } = window.__TAURI__.tauri
+      invoke('mark_shutdown', {})
+      let pElem = document.getElementById("popup-text")
+      let yElem = document.getElementById("btnYes")
+      let nElem = document.getElementById("btnNo")
+      yElem.style.display = 'none';
+      nElem.style.display = 'none';
+      pElem.textContent = "Dolos must launch the Riot Games launcher with a custom configuration to work. Please close Dolos and stop any Riot Games processes and retry."
     });
 
     document.getElementById('btnYes').addEventListener('click', function() {
@@ -106,7 +113,6 @@
         hideRiotClientPopup();
       }, 2500)
     });
-
   </script>
 </body>
 </html>
