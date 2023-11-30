@@ -82,10 +82,6 @@ async fn launch_game(app: tauri::AppHandle, game: String) -> () {
 
   tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
   app.get_window("main").unwrap().close().unwrap();
-  let _ = Notification::new(&app.config().tauri.bundle.identifier)
-        .title("Dolos is running")
-        .body("Dolos is running in the background setting your status to offline! View the tray icon for more options.")
-        .show();
 }
 
 #[tauri::command]
