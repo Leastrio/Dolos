@@ -30,3 +30,4 @@ jobs:
           tagName: dolos-v__VERSION__
           releaseName: 'Dolos v__VERSION__'
           releaseBody: 'See the assets below to download either installer.'
+          updaterJsonPreferNsis: true
